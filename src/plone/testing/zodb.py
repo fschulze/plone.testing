@@ -1,9 +1,19 @@
 """ZODB-specific helpers and layers 
 """
 
+import os
+
+try:
+    from zope.testrunner import runner
+except ImportError, exc_value:
+    try:
+        from zope.testing.testrunner import runner
+    except ImportError:
+        raise exc_value
+
 from plone.testing import Layer
 
-def stackDemoStorage(db=None, name=None):
+def stackDemoStorage(db=None, name=None, base=None, changes=None, layer=None):
     """Create a new DemoStorage that has the given database as a base.
     ``db`` may be none, in which case a base demo storage will be created.
     ``name`` is optional, but can be used to name the storage.
@@ -20,13 +30,39 @@ def stackDemoStorage(db=None, name=None):
     
     from ZODB.DemoStorage import DemoStorage
     from ZODB.DB import DB
+
+    storages = [storage for storage in os.environ.get(
+        'PLONE_TESTING_FILESTORAGES', '').split(',') if storage]
+    is_db_setup = False
+    if layer is not None and changes is None and storages:
+        from zope.dottedname import resolve
+        gathered = []
+        for dotted in storages:
+            resolved = resolve.resolve(dotted)
+            runner.gather_layers(resolved, gathered)
+        if layer in gathered:
+            from ZODB import FileStorage
+            storages_dir = os.path.join('var', 'filestorage')
+            if not os.path.isdir(storages_dir):
+                os.makedirs(storages_dir)
+            file_name = os.path.join(storages_dir, layer.__name__ + '.fs')
+            if os.path.isfile(file_name):
+                is_db_setup = True
+            changes = FileStorage.FileStorage(file_name)
     
-    if db is not None:
-        storage = DemoStorage(name=name, base=db.storage)
-    else:
-        storage = DemoStorage(name=name)
+    if base is None:
+        if db is not None:
+            base = db.storage
+        else:
+            from ZODB import MappingStorage
+            base = MappingStorage.MappingStorage()
+    storage = DemoStorage(
+        name=name, base=base, changes=changes, close_base_on_close=False)
     
-    return DB(storage)
+    stacked = DB(storage)
+    if is_db_setup:
+        stacked.db_setup = is_db_setup
+    return stacked
 
 class EmptyZODB(Layer):
     """Set up a new ZODB database using ``DemoStorage``. The database object

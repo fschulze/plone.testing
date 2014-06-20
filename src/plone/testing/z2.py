@@ -482,7 +482,8 @@ class Startup(Layer):
         # Layer a new storage for Zope 2 on top of the one from the base
         # layer, if there is one.
 
-        self['zodbDB'] = zodb.stackDemoStorage(self.get('zodbDB'), name='Startup')
+        self['zodbDB'] = zodb.stackDemoStorage(
+            self.get('zodbDB'), name='Startup', layer=self)
 
         # Create a facade for the database object that will delegate to the
         # correct underlying database. This allows resource shadowing to work
