@@ -10,6 +10,12 @@ Changelog
 - Fix issue, which prevented using layered-helper on Python 3.
   [datakurre]
 
+- Fix ``.z2.Startup.setUpZCML()`` to be compatible with Zope >= 4.0a2.
+  [icemac]
+
+- Fix version pins on the package itself to be able to run the tests.
+  [gforcada]
+
 5.0.0 (2016-02-19)
 ------------------
 
